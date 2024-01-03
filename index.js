@@ -1,9 +1,22 @@
 const express = require('express');
+const morgan = require('morgan')
 const app = express();
+
+// define a custom token.
+// returns the request body as a string,
+// or and empty string if body is empty
+morgan.token('content', req => {
+    if (Object.keys(req.body).length === 0) {
+        return ""
+    } else {
+        return JSON.stringify(req.body);
+    }
+})
 
 // use json parser
 app.use(express.json());
-
+// use logger with custom formatting
+app.use(morgan(':method :url :status :response-time ms :res[content-length] :content'))
 
 let persons = require('./persons');
 
