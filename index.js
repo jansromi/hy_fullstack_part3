@@ -50,8 +50,50 @@ app.get('/info', (req, res) => {
 app.delete('/api/persons/:id', (req, res) => {
     const id = Number(req.params.id);
     // filter the array to return a new array without the deleted entry
-    persons = persons.filter(person => person.id !== id)
-    res.status(204).end()
+    persons = persons.filter(person => person.id !== id);
+    res.status(204).end();
+})
+
+
+const genId = () =>  {
+    return Math.floor(Math.random() * 10000) + 1;
+}
+
+app.post('/api/persons', (req, res) => {
+    const body = req.body;
+
+    // if name is missing
+    if (!body.name) {
+        return res.status(400).json({ 
+            error: 'Name missing' 
+          })
+    }
+
+    // if number missing
+    if (!body.number) {
+        return res.status(400).json({ 
+            error: 'Number missing' 
+          })
+    }
+
+    const nameExists = persons.some(person => person.name.toLowerCase() === body.name.toLowerCase());
+
+    // if person is already in the listing
+    if (nameExists) {
+        return res.status(400).json({ 
+            error: 'Name already exists' 
+        });
+    }
+
+    const person = {
+        id: genId(),
+        name: body.name,
+        number: body.number
+    }
+
+    persons = persons.concat(person)
+
+    res.json(person)
 })
 
 const PORT = 3001
