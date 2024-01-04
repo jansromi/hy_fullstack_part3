@@ -1,5 +1,7 @@
 const express = require('express');
 const morgan = require('morgan')
+const cors = require('cors')
+
 const app = express();
 
 // define a custom token.
@@ -17,6 +19,8 @@ morgan.token('content', req => {
 app.use(express.json());
 // use logger with custom formatting
 app.use(morgan(':method :url :status :response-time ms :res[content-length] :content'))
+// enable cors
+app.use(cors())
 
 let persons = require('./persons');
 
@@ -67,10 +71,56 @@ app.delete('/api/persons/:id', (req, res) => {
     res.status(204).end();
 })
 
-
+/**
+ * @returns a random number between 1-10000
+ */
 const genId = () =>  {
     return Math.floor(Math.random() * 10000) + 1;
 }
+
+/**
+ * Iterate over persons
+ * and create a new array with updated object
+ * @param {int} id 
+ * @param {json} updatedPerson 
+ */
+const updatePerson = (id, updatedPerson) => {
+    persons = persons.map(person => {
+      if (person.id === id) {
+        return updatedPerson;
+      }
+      return person;
+    });
+};
+
+/**
+ * Route for editing an entry
+ * 
+ * @returns the modified resource
+ */
+app.patch('/api/persons/:id', (req, res) => {
+    
+    const id = Number(req.params.id);
+    const foundPerson = persons.find(person => person.id === id);
+
+    if (!foundPerson) {
+        return res.status(404).json({
+            error: 'Resource not found'
+        })
+    } 
+
+    const newValue = req.body;
+    let person = {...foundPerson}
+
+
+    if (newValue.hasOwnProperty('number')) {
+        const newNumber = newValue.number;
+        person.number = newNumber;
+        updatePerson(person.id, person);
+    }
+
+    return res.json(person)
+})
 
 app.post('/api/persons', (req, res) => {
     const body = req.body;
