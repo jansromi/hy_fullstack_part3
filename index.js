@@ -21,6 +21,8 @@ app.use(express.json());
 app.use(morgan(':method :url :status :response-time ms :res[content-length] :content'))
 // enable cors
 app.use(cors())
+// provide static content
+app.use(express.static('dist'))
 
 let persons = require('./persons');
 
