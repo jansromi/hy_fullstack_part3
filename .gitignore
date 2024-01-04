@@ -1,4 +1,5 @@
 /harjoitukset
 node_modules/
 .vscode/
-
+.dockerignore
+package-lock.json
