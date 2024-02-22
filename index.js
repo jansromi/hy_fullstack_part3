@@ -1,6 +1,12 @@
+require('dotenv').config()
 const express = require('express');
 const morgan = require('morgan')
 const cors = require('cors')
+const Person = require('./models/person')
+const getPersons = require('./models/persons')
+let persons = getPersons().then(result => {
+    persons = result;
+})
 
 const app = express();
 
@@ -24,9 +30,6 @@ app.use(cors())
 // provide static content
 app.use(express.static('dist'))
 
-let persons = require('./persons');
-
-
 app.get('/', (req, res) => {
     res.sendStatus(200);
 })
@@ -34,15 +37,18 @@ app.get('/', (req, res) => {
 /**
  * Route providing all entries
  */
-app.get('/api/persons', (req, res) => {
-    res.json(persons);
-})
+app.get('/api/persons', (request, response) => {
+    Person.find({}).then(persons => {
+    persons = persons.map(person => person.toJSON())
+      response.json(persons)
+    })
+  })
 
 /**
  * Route providing a single entry
  */
 app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const person = persons.find(person => person.id === id);
 
     if (person) {
@@ -67,18 +73,11 @@ app.get('/info', (req, res) => {
  * Route for deleting an entry
  */
 app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id);
-    // filter the array to return a new array without the deleted entry
+    const id = String(req.params.id);
     persons = persons.filter(person => person.id !== id);
+    console.log(persons);
     res.status(204).end();
 })
-
-/**
- * @returns a random number between 1-10000
- */
-const genId = () =>  {
-    return Math.floor(Math.random() * 10000) + 1;
-}
 
 /**
  * Iterate over persons
@@ -102,7 +101,7 @@ const updatePerson = (id, updatedPerson) => {
  */
 app.patch('/api/persons/:id', (req, res) => {
     
-    const id = Number(req.params.id);
+    const id = String(req.params.id);
     const foundPerson = persons.find(person => person.id === id);
 
     if (!foundPerson) {
@@ -150,15 +149,16 @@ app.post('/api/persons', (req, res) => {
         });
     }
 
-    const person = {
-        id: genId(),
+    const person = new Person({
         name: body.name,
-        number: body.number
-    }
+        number: body.number,
+    })
 
-    persons = persons.concat(person)
+    person.save().then(savedPerson => {
+        persons = persons.concat(savedPerson)
+        res.json(savedPerson)
+    })
 
-    res.json(person)
 })
 
 const PORT = process.env.PORT || 3001
