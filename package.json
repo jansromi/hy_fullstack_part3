@@ -10,12 +10,16 @@
     "build:ui": "./build-ui.sh",
     "deploy": "fly deploy",
     "deploy:full": "npm run build:ui && npm run deploy",
-    "logs:prod": "fly logs"
+    "logs:prod": "fly logs",
+    "lint": "eslint ."
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@flydotio/dockerfile": "^0.5.0",
+    "@stylistic/eslint-plugin-js": "^1.6.2",
+    "eslint": "^8.56.0",
+    "eslint-config-google": "^0.14.0",
     "nodemon": "^3.0.2"
   },
   "dependencies": {
