@@ -2,13 +2,9 @@ require('dotenv').config()
 const express = require('express');
 const morgan = require('morgan')
 const cors = require('cors')
-const Person = require('./models/person')
-const getPersons = require('./models/persons')
-let persons = getPersons().then(result => {
-    persons = result;
-})
-
 const app = express();
+
+const Person = require('./models/person')
 
 // define a custom token.
 // returns the request body as a string,
@@ -20,6 +16,16 @@ morgan.token('content', req => {
         return JSON.stringify(req.body);
     }
 })
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+  
+    if (error.name === 'CastError') {
+      return response.status(400).send({ error: 'malformatted id' })
+    }
+  
+    next(error)
+  }
 
 // use json parser
 app.use(express.json());
@@ -47,82 +53,65 @@ app.get('/api/persons', (request, response) => {
 /**
  * Route providing a single entry
  */
-app.get('/api/persons/:id', (req, res) => {
-    const id = String(req.params.id);
-    const person = persons.find(person => person.id === id);
-
-    if (person) {
-        res.json(person);
-    } else {
-        res.status(404).end();
-    }
+app.get('/api/persons/:id', (req, res, next) => {
+    Person.findById(req.params.id).then(person => {
+        if (person) {
+            res.json(person.toJSON())
+        } else {
+            res.status(404).end()
+        }
+    })
+    .catch(error => next(error))
 })
 
 /**
  * Route for info-page
  */
-app.get('/info', (req, res) => {
-    // send how many entries and current date
-    res.send(`
-    <p>Phonebook has info for ${persons.length} people</p>
-    <p>${new Date().toString()}</p>
-    `);
-})
+app.get('/info', (req, res, next) => {
+    Person.countDocuments({})
+        .then(count => {
+            res.send(`
+                <p>Phonebook has info for ${count} people</p>
+                <p>${new Date().toString()}</p>
+            `);
+        })
+        .catch(error => next(error))
+});
 
 /**
  * Route for deleting an entry
  */
-app.delete('/api/persons/:id', (req, res) => {
-    const id = String(req.params.id);
-    persons = persons.filter(person => person.id !== id);
-    console.log(persons);
-    res.status(204).end();
+app.delete('/api/persons/:id', (req, res, next) => {
+    Person.findByIdAndDelete(req.params.id)
+    .then(result => {
+      res.status(204).end()
+    })
+    .catch(error => next(error))
 })
-
-/**
- * Iterate over persons
- * and create a new array with updated object
- * @param {int} id 
- * @param {json} updatedPerson 
- */
-const updatePerson = (id, updatedPerson) => {
-    persons = persons.map(person => {
-      if (person.id === id) {
-        return updatedPerson;
-      }
-      return person;
-    });
-};
 
 /**
  * Route for editing an entry
  * 
  * @returns the modified resource
  */
-app.patch('/api/persons/:id', (req, res) => {
-    
-    const id = String(req.params.id);
-    const foundPerson = persons.find(person => person.id === id);
+app.put('/api/persons/:id', (req, res) => {
+    const body = req.body;
 
-    if (!foundPerson) {
-        return res.status(404).json({
-            error: 'Resource not found'
-        })
-    } 
-
-    const newValue = req.body;
-    let person = {...foundPerson}
-
-
-    if (newValue.hasOwnProperty('number')) {
-        const newNumber = newValue.number;
-        person.number = newNumber;
-        updatePerson(person.id, person);
+    const person = {
+        name: body.name,
+        number: body.number
     }
 
-    return res.json(person)
+    Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    .then(updatedPerson => {
+        res.json(updatedPerson.toJSON())
+    })
+    .catch(error => next(error))
 })
 
+/**
+ * Route for adding a new entry
+ */
 app.post('/api/persons', (req, res) => {
     const body = req.body;
 
@@ -140,26 +129,27 @@ app.post('/api/persons', (req, res) => {
           })
     }
 
-    const nameExists = persons.some(person => person.name.toLowerCase() === body.name.toLowerCase());
-
-    // if person is already in the listing
-    if (nameExists) {
-        return res.status(400).json({ 
-            error: 'Name already exists' 
-        });
-    }
-
-    const person = new Person({
-        name: body.name,
-        number: body.number,
+    // a case insensitive search for the name.
+    Person.findOne({ name: { $regex: new RegExp(`^${body.name}$`, 'i') } })
+    .then(existingPerson => {
+        if (existingPerson) {
+            return res.status(400).json({ 
+                error: 'Name already exists' 
+            });
+        }
+        const person = new Person({
+            name: body.name,
+            number: body.number,
+        })
+    
+        person.save().then(savedPerson => {
+            persons = persons.concat(savedPerson)
+            res.json(savedPerson)
+        })
     })
-
-    person.save().then(savedPerson => {
-        persons = persons.concat(savedPerson)
-        res.json(savedPerson)
-    })
-
 })
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {

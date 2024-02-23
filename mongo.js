@@ -7,15 +7,15 @@ if (process.argv.length<3) {
 
 const password = process.argv[2]
 
-let contactName = "";
-let contactNumber = "";
-let contactAdded = false;
+let personName = "";
+let personNumber = "";
+let personAdded = false;
 
 // if both name and number are provided
 if (process.argv.length === 5) {
-    contactName = process.argv[3];
-    contactNumber = process.argv[4];
-    contactAdded = true;
+    personName = process.argv[3];
+    personNumber = process.argv[4];
+    personAdded = true;
 }
 
 const url =
@@ -24,30 +24,30 @@ const url =
 mongoose.set('strictQuery', false)
 mongoose.connect(url)
   
-const contactSchema = new mongoose.Schema({
+const personSchema = new mongoose.Schema({
     name: String,
     number: String,
   })
 
-const Contact = mongoose.model('Contact', contactSchema)
+const Person = mongoose.model('Person', personSchema)
 
 // creating a new contact
-if (contactAdded) {
-    const contact = new Contact({
-        name: contactName,
-        number: contactNumber,
+if (personAdded) {
+    const person = new Person({
+        name: personName,
+        number: personNumber,
     })
 
-    contact.save().then(response => {
-        console.log(`added ${contactName} number ${contactNumber} to phonebook`)
+    person.save().then(response => {
+        console.log(`added ${personName} number ${personNumber} to phonebook`)
         mongoose.connection.close()
     })
 } else {
     // listing all contacts
-    Contact.find({}).then(result => {
+    Person.find({}).then(result => {
         console.log('phonebook:')
-        result.forEach(contact => {
-            console.log(contact.name, contact.number)
+        result.forEach(person => {
+            console.log(person.name, person.number)
         })
         mongoose.connection.close()
     })
